@@ -285,12 +285,32 @@ def load_model(path: Path = FINETUNED_MODEL_PATH, num_classes: int = 2) -> nn.Mo
 
 def visualize_heatmap_on_image(heatmap: Tensor, input_tensor: Tensor) -> Tensor:
     """Overlay the Grad-CAM heatmap onto the original image tensor for display."""
-    heatmap = heatmap.unsqueeze(0)
-    heatmap = heatmap.repeat(3, 1, 1)
-    heatmap = heatmap / heatmap.max()
-    overlay = 0.3 * input_tensor.cpu() + 0.7 * heatmap
+    import torch.nn.functional as F
+    
+    # Resize heatmap to match input image size
+    # heatmap is (H, W), input_tensor is (C, H, W)
+    target_size = input_tensor.shape[1:]  # Get (H, W) from (C, H, W)
+    
+    # Add batch and channel dimensions for interpolation: (1, 1, H, W)
+    heatmap_resized = F.interpolate(
+        heatmap.unsqueeze(0).unsqueeze(0),
+        size=target_size,
+        mode='bilinear',
+        align_corners=False
+    )
+    # Remove batch and channel dimensions: (H, W)
+    heatmap_resized = heatmap_resized.squeeze(0).squeeze(0)
+    
+    # Normalize heatmap
+    heatmap_resized = heatmap_resized / (heatmap_resized.max() + 1e-8)
+    
+    # Repeat across 3 channels to match RGB
+    heatmap_resized = heatmap_resized.unsqueeze(0).repeat(3, 1, 1)
+    
+    # Create overlay
+    overlay = 0.3 * input_tensor.cpu() + 0.7 * heatmap_resized
     overlay = overlay.clamp(0, 1)
-    return make_grid(overlay, normalize=True)
+    return overlay
 
 
 def ensure_data_directories() -> None:

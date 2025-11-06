@@ -21,6 +21,8 @@ from transformers import (
 )
 from transformers.trainer_utils import EvalPrediction
 
+import evaluate
+
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 ROOT_DIR = Path(__file__).resolve().parent
 MODEL_DIR = ROOT_DIR / "artifacts" / "nlp"
@@ -30,8 +32,8 @@ MODEL_DIR.mkdir(parents=True, exist_ok=True)
 FINETUNED_MODEL_PATH = MODEL_DIR / "t5_small_finetuned"
 
 DEFAULT_MODEL_NAME = "t5-small"
-DEFAULT_DATASET = "scientific_papers"
-DEFAULT_DATASET_CONFIG = "pubmed"
+DEFAULT_DATASET = "ccdv/pubmed-summarization"
+DEFAULT_DATASET_CONFIG = None
 MAX_INPUT_LENGTH = 512
 MAX_TARGET_LENGTH = 150
 
@@ -51,8 +53,17 @@ def load_summarization_dataset(
 
 def preprocess_function(examples: Dict[str, List[str]], tokenizer: AutoTokenizer) -> Dict[str, Any]:
     """Tokenize inputs and targets for T5."""
-    inputs = examples["article"] if "article" in examples else examples.get("text", [])
-    targets = examples["abstract"] if "abstract" in examples else examples.get("summary", [])
+    # Handle different dataset formats
+    if "article" in examples:
+        inputs = examples["article"]
+        targets = examples["abstract"]
+    elif "document" in examples:
+        inputs = examples["document"]
+        targets = examples["summary"]
+    else:
+        inputs = examples.get("text", [])
+        targets = examples.get("summary", [])
+    
     model_inputs = tokenizer(
         inputs,
         max_length=MAX_INPUT_LENGTH,
@@ -80,9 +91,8 @@ def build_model_and_tokenizer(model_name: str = DEFAULT_MODEL_NAME):
 
 def compute_metrics(pred: EvalPrediction, tokenizer: AutoTokenizer):
     """Compute ROUGE scores for evaluation."""
-    from datasets import load_metric
 
-    rouge = load_metric("rouge")
+    rouge = evaluate.load("rouge")
     decoded_preds = tokenizer.batch_decode(pred.predictions, skip_special_tokens=True)
     decoded_labels = tokenizer.batch_decode(pred.label_ids, skip_special_tokens=True)
 

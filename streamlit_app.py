@@ -51,7 +51,7 @@ def display_gradcam(image: Image.Image, model) -> Tuple[Image.Image, int, float]
 
     heatmap = generate_gradcam(model, input_tensor, target_category=predicted_class)
     overlay_tensor = visualize_heatmap_on_image(heatmap, baseline_tensor.squeeze(0))
-    overlay_np = overlay_tensor.permute(1, 2, 0).numpy()
+    overlay_np = overlay_tensor.detach().permute(1, 2, 0).numpy()
     overlay_img = Image.fromarray((overlay_np * 255).astype(np.uint8))
     return overlay_img, predicted_class, confidence
 
@@ -66,7 +66,7 @@ def render_xray_tab():
 
     if uploaded_file is not None:
         image = Image.open(uploaded_file)
-        st.image(image, caption="Uploaded X-Ray", use_column_width=True)
+        st.image(image, caption="Uploaded X-Ray", use_container_width=True)
 
         model = load_vision_model()
         overlay_img, predicted_class, confidence = display_gradcam(image, model)
@@ -76,7 +76,7 @@ def render_xray_tab():
         st.write(f"**Class:** {label_map.get(predicted_class, 'Unknown')} | **Confidence:** {confidence:.2%}")
 
         st.subheader("Grad-CAM Heatmap")
-        st.image(overlay_img, caption="Grad-CAM Overlay", use_column_width=True)
+        st.image(overlay_img, caption="Grad-CAM Overlay", use_container_width=True)
     else:
         st.info("Please upload a chest X-ray image to generate predictions.")
 
