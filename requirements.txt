@@ -1,0 +1,10 @@
+torch>=2.0
+torchvision>=0.15
+torchcam>=0.4
+streamlit>=1.25
+pillow>=9.0
+numpy>=1.23
+transformers>=4.30
+datasets>=2.12
+evaluate>=0.4
+rouge-score>=0.1
