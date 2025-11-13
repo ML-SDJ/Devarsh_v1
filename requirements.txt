@@ -8,3 +8,4 @@ transformers>=4.30
 datasets>=2.12
 evaluate>=0.4
 rouge-score>=0.1
+

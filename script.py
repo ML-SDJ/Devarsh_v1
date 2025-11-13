@@ -1,3 +1,4 @@
+import pandas as pd
 from PIL import Image
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
@@ -90,18 +91,17 @@ model.load_state_dict(torch.load('cnn_chestxray.pth', map_location=device))
 model.to(device)
 model.eval()
 
-
-folder = 'data/chest_xray/test/NORMAL/'
-model.eval()
 results = []
-
-for filename in os.listdir(folder):
-    if filename.lower().endswith(('.jpeg', '.jpg', '.png')):
-        img_path = os.path.join(folder, filename)
-        img = Image.open(img_path)
-        input_tensor = data_transforms(img).unsqueeze(0).to(device)
-        with torch.no_grad():
-            output = model(input_tensor)
-            pred = torch.argmax(output, dim=1).item()  # 0=NORMAL, 1=PNEUMONIA
-        results.append((filename, pred))
-        print(f'{filename}: {pred}')
+for cls in ["NORMAL", "PNEUMONIA"]:
+    folder = f'data/chest_xray/test/{cls}/'
+    for filename in os.listdir(folder):
+        if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+            img_path = os.path.join(folder, filename)
+            img = Image.open(img_path)
+            input_tensor = data_transforms(img).unsqueeze(0).to(device)
+            with torch.no_grad():
+                output = model(input_tensor)
+                pred = torch.argmax(output, dim=1).item()
+            results.append({"image_name": filename, "result": pred, "true_class": cls})
+results_df = pd.DataFrame(results)
+results_df.to_csv("predictions_all.csv", index=False)
